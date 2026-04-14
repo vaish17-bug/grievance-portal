@@ -33,33 +33,34 @@ public class AuthService {
     //     return new AuthResponse(token, user.getRole().name(), user.getName(), user.getId());
     // }
     public AuthResponse register(AuthRequest request) {
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
 
-    if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-        throw new RuntimeException("Email already exists");
+        User user = new User();
+        user.setName(request.getName());
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(User.Role.valueOf(request.getRole().toUpperCase()));
+        user.setPhone(request.getPhone());
+
+        userRepository.save(user);
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponse(
+                token,
+                user.getRole().name(),
+                user.getName(),
+                user.getId()
+        );
     }
-
-    User user = new User();
-    user.setName(request.getName());
-    user.setEmail(request.getEmail());
-    user.setPassword(passwordEncoder.encode(request.getPassword()));
-    user.setRole(User.Role.valueOf(request.getRole().toUpperCase()));
-    user.setPhone(request.getPhone());
-
-    userRepository.save(user);
-
-    String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-
-    return new AuthResponse(
-            token,
-            user.getRole().name(),
-            user.getName(),
-            user.getId()
-    );
-}
 
     // Login existing user
     public AuthResponse login(AuthRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = normalizeEmail(request.getEmail());
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // Check if password matches
@@ -69,5 +70,9 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return new AuthResponse(token, user.getRole().name(), user.getName(), user.getId());
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 }
