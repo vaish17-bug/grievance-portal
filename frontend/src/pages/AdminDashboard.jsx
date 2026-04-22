@@ -74,6 +74,16 @@ export default function AdminDashboard() {
                   <p className="text-gray-400 text-xs mt-1">
                     By: {c.citizen?.name} | Category: {c.category}
                   </p>
+                  {c.attachments && c.attachments.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm font-medium">Attachments:</p>
+                      <div className="flex gap-2 mt-1 flex-wrap">
+                        {c.attachments.map(a => (
+                          <img key={a.id} src={`http://localhost:8081${a.fileUrl}`} alt="attachment" className="w-20 h-20 object-cover rounded border" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className={`ml-4 px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[c.status]}`}>
                   {c.status}
