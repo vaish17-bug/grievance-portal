@@ -1,35 +1,43 @@
-// This file handles all communication with our backend
 import axios from 'axios';
 
-const API = axios.create({
-  baseURL: 'http://localhost:8080/api',
+const api = axios.create({
+  baseURL: "http://localhost:8080/api",
 });
 
-// Automatically attach JWT token to every request
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+// 🔥 FORCE TOKEN INTO EVERY REQUEST
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
-// Auth APIs
-export const loginUser = (data) => API.post('/auth/login', data);
-export const registerUser = (data) => API.post('/auth/register', data);
+export const loginUser = (data) => api.post('/auth/login', data);
+export const registerUser = (data) => api.post('/auth/register', data);
 
-// Complaint APIs
-export const submitComplaint = (formData) => API.post('/complaints', formData);
-export const getMyComplaints = () => API.get('/complaints/my');
-export const getAllComplaints = () => API.get('/complaints');
+export const submitComplaint = (formData) =>
+  api.post('/complaints', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+
+export const getMyComplaints = () => api.get('/complaints/my');
+export const getAllComplaints = () => api.get('/complaints');
 export const assignComplaint = (id, workerId) =>
-  API.post(`/complaints/${id}/assign?workerId=${workerId}`);
-export const updateComplaintStatus = (id, status, remark) =>
-  API.patch(`/complaints/${id}/status?status=${status}&remark=${remark}`);
-export const getWorkerTasks = () => API.get('/complaints/worker-tasks');
-export const getComplaintHistory = (id) => API.get(`/complaints/${id}/history`);
+  api.post(`/complaints/${id}/assign?workerId=${workerId}`);
 
-// Public APIs
-export const getStats = () => API.get('/public/stats');
-export const getDepartments = () => API.get('/public/departments');
-export const getWorkers = () => API.get('/public/workers');
+export const updateComplaintStatus = (id, status, remark) =>
+  api.patch(`/complaints/${id}/status?status=${status}&remark=${remark}`);
+
+export const getWorkerTasks = () => api.get('/complaints/worker-tasks');
+export const getComplaintHistory = (id) => api.get(`/complaints/${id}/history`);
+
+export const getStats = () => api.get('/public/stats');
+export const getDepartments = () => api.get('/public/departments');
+export const getWorkers = () => api.get('/public/workers');
+
+export default api;

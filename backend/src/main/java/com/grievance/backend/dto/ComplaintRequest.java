@@ -9,4 +9,5 @@ public class ComplaintRequest {
     private Double latitude;
     private Double longitude;
     private Long departmentId;
+    private String address;
 }

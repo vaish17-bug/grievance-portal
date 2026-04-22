@@ -27,6 +27,7 @@ export default function AdminDashboard() {
   const handleAssign = async (complaintId) => {
     const workerId = selectedWorker[complaintId];
     if (!workerId) return toast.error('Please select a worker');
+
     try {
       await assignComplaint(complaintId, workerId);
       toast.success('Assigned successfully!');
@@ -38,16 +39,22 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="bg-purple-700 text-white p-4 flex justify-between items-center">
         <h1 className="text-xl font-bold">🏛️ Admin Dashboard</h1>
         <div className="flex gap-4 items-center">
           <span>Hello, {user?.name}</span>
-          <button onClick={logout} className="bg-white text-purple-700 px-3 py-1 rounded font-semibold">Logout</button>
+          <button
+            onClick={logout}
+            className="bg-white text-purple-700 px-3 py-1 rounded font-semibold"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-6">
-        {/* Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Total', value: stats.total, color: 'bg-blue-500' },
@@ -62,35 +69,76 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Complaints Table */}
+        {/* Complaints */}
         <h2 className="text-xl font-semibold mb-4">All Complaints</h2>
+
         <div className="space-y-4">
           {complaints.map(c => (
             <div key={c.id} className="bg-white rounded-2xl shadow p-5">
               <div className="flex justify-between items-start">
+                
                 <div className="flex-1">
                   <h3 className="font-semibold">{c.title}</h3>
-                  <p className="text-gray-600 text-sm mt-1">{c.description}</p>
+
+                  <p className="text-gray-600 text-sm mt-1">
+                    {c.description}
+                  </p>
+
                   <p className="text-gray-400 text-xs mt-1">
                     By: {c.citizen?.name} | Category: {c.category}
                   </p>
+
+                  {/* 🔥 LOCATION DISPLAY */}
+                  {c.latitude != null && c.longitude != null && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500">
+                        📍 Lat: {Number(c.latitude).toFixed(4)}, Lng: {Number(c.longitude).toFixed(4)}
+                      </p>
+
+                      <a
+                        href={`https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 text-sm underline"
+                      >
+                        View Location on Map
+                      </a>
+                    </div>
+                  )}
                 </div>
-                <span className={`ml-4 px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[c.status]}`}>
+
+                <span
+                  className={`ml-4 px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[c.status]}`}
+                >
                   {c.status}
                 </span>
               </div>
 
-              {/* Assign Worker (only for PENDING complaints) */}
+              {/* Assign Worker */}
               {c.status === 'PENDING' && (
                 <div className="flex gap-2 mt-3">
-                  <select className="border rounded-lg px-3 py-2 text-sm flex-1"
+                  <select
+                    className="border rounded-lg px-3 py-2 text-sm flex-1"
                     value={selectedWorker[c.id] || ''}
-                    onChange={e => setSelectedWorker({ ...selectedWorker, [c.id]: e.target.value })}>
+                    onChange={e =>
+                      setSelectedWorker({
+                        ...selectedWorker,
+                        [c.id]: e.target.value,
+                      })
+                    }
+                  >
                     <option value="">Select Worker</option>
-                    {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    {workers.map(w => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
                   </select>
-                  <button onClick={() => handleAssign(c.id)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700">
+
+                  <button
+                    onClick={() => handleAssign(c.id)}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700"
+                  >
                     Assign
                   </button>
                 </div>
