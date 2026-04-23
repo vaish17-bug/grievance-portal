@@ -17,7 +17,8 @@ public class ComplaintService {
     private final DepartmentRepository departmentRepository;
     private final AssignmentRepository assignmentRepository;
     private final StatusHistoryRepository statusHistoryRepository;
-
+    private final NotificationService notificationService;
+    
     // Citizen submits a new complaint
     public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl) {
         User citizen = userRepository.findByEmail(citizenEmail)

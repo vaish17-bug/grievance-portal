@@ -16,7 +16,7 @@ public class Complaint {
     private String title;
 
     @Column(columnDefinition = "TEXT")
-    private String description;
+    private String photoUrls;
 
     private String category;
     private String photoUrl;

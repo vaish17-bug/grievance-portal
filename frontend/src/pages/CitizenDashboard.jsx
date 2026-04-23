@@ -17,7 +17,8 @@ export default function CitizenDashboard() {
   const [departments, setDepartments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', category: '', departmentId: '' });
-  const [photo, setPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
 
   useEffect(() => {
     loadComplaints();
