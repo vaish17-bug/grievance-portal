@@ -13,6 +13,10 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
+// Notifications
+export const getNotifications = () => API.get('/notifications');
+export const getUnreadCount = () => API.get('/notifications/unread-count');
+export const markNotificationsRead = () => API.post('/notifications/mark-read');
 
 // Auth APIs
 export const loginUser = (data) => API.post('/auth/login', data);

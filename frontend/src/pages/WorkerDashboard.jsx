@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getWorkerTasks, updateComplaintStatus } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import NotificationBell from '../components/NotificationBell';
 
 export default function WorkerDashboard() {
   const { user, logout } = useAuth();
@@ -31,6 +32,7 @@ export default function WorkerDashboard() {
         <div className="flex gap-4 items-center">
           <span>Hello, {user?.name}</span>
           <button onClick={logout} className="bg-white text-blue-700 px-3 py-1 rounded font-semibold">Logout</button>
+          <NotificationBell />
         </div>
       </div>
 

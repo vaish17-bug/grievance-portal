@@ -17,6 +17,7 @@ public class ComplaintService {
     private final DepartmentRepository departmentRepository;
     private final AssignmentRepository assignmentRepository;
     private final StatusHistoryRepository statusHistoryRepository;
+    private final NotificationService notificationService;
 
     // Citizen submits a new complaint
     public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl) {
@@ -42,7 +43,14 @@ public class ComplaintService {
 
         // Save initial status in history
         saveStatusHistory(saved, "PENDING", "Complaint submitted", citizen);
-
+        userRepository.findByRole(User.Role.ADMIN).forEach(admin ->
+    notificationService.createNotification(
+        admin,
+        "New complaint submitted by " + citizen.getName() + ": " + complaint.getTitle(),
+        "NEW_COMPLAINT",
+        saved
+    )
+      );
         return saved;
     }
 
@@ -65,8 +73,20 @@ public class ComplaintService {
         complaint.setStatus(Complaint.Status.ASSIGNED);
         complaintRepository.save(complaint);
         saveStatusHistory(complaint, "ASSIGNED", "Assigned to worker: " + worker.getName(), admin);
-
-        return assignmentRepository.save(assignment);
+        Assignment saved = assignmentRepository.save(assignment);
+        notificationService.createNotification(
+    worker,
+    "New task assigned: " + complaint.getTitle(),
+    "ASSIGNED",
+    complaint
+);
+notificationService.createNotification(
+    complaint.getCitizen(),
+    "Your complaint '" + complaint.getTitle() + "' has been assigned to a worker.",
+    "STATUS_UPDATE",
+    complaint
+);
+        return saved;
     }
 
     // Worker updates complaint status
@@ -80,7 +100,12 @@ public class ComplaintService {
         complaint.setStatus(Complaint.Status.valueOf(status));
         complaintRepository.save(complaint);
         saveStatusHistory(complaint, status, remark, worker);
-
+          notificationService.createNotification(
+    complaint.getCitizen(),
+    "Your complaint '" + complaint.getTitle() + "' status changed to: " + status,
+    "STATUS_UPDATE",
+    complaint
+);
         return complaint;
     }
 

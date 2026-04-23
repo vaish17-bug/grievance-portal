@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -20,40 +21,44 @@ public class ComplaintController {
     private final ComplaintService complaintService;
 
     // POST /api/complaints — citizen submits complaint
-    @PostMapping
-    public ResponseEntity<Complaint> submit(
-            @RequestParam String title,
-            @RequestParam String description,
-            @RequestParam String category,
-            @RequestParam(required = false) Double latitude,
-            @RequestParam(required = false) Double longitude,
-            @RequestParam(required = false) Long departmentId,
-            @RequestParam(required = false) MultipartFile photo,
-            Authentication auth) throws Exception {
+   // POST /api/complaints
+@PostMapping
+public ResponseEntity<Complaint> submit(
+        @RequestParam String title,
+        @RequestParam String description,
+        @RequestParam String category,
+        @RequestParam(required = false) Double latitude,
+        @RequestParam(required = false) Double longitude,
+        @RequestParam(required = false) Long departmentId,
+        @RequestParam(required = false) List<MultipartFile> photos,  // ← Changed to List
+        Authentication auth) throws Exception {
 
-        String photoUrl = null;
+    List<String> photoUrls = new ArrayList<>();
 
-        // Save uploaded photo to local folder
-        if (photo != null && !photo.isEmpty()) {
-            String uploadDir = "uploads/";
-            new File(uploadDir).mkdirs();
-            String filename = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
-            photo.transferTo(new File(uploadDir + filename));
-            photoUrl = "/uploads/" + filename;
+    if (photos != null) {
+        for (MultipartFile photo : photos) {
+            if (!photo.isEmpty()) {
+                String uploadDir = "uploads/";
+                new File(uploadDir).mkdirs();
+                String filename = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
+                photo.transferTo(new File(uploadDir + filename));
+                photoUrls.add("/uploads/" + filename);
+            }
         }
-
-        ComplaintRequest request = new ComplaintRequest();
-        request.setTitle(title);
-        request.setDescription(description);
-        request.setCategory(category);
-        request.setLatitude(latitude);
-        request.setLongitude(longitude);
-        request.setDepartmentId(departmentId);
-
-        return ResponseEntity.ok(
-            complaintService.submitComplaint(request, auth.getName(), photoUrl)
-        );
     }
+
+    ComplaintRequest request = new ComplaintRequest();
+    request.setTitle(title);
+    request.setDescription(description);
+    request.setCategory(category);
+    request.setLatitude(latitude);
+    request.setLongitude(longitude);
+    request.setDepartmentId(departmentId);
+
+    return ResponseEntity.ok(
+        complaintService.submitComplaint(request, auth.getName(), String.join(",", photoUrls))
+    );
+}
 
     // GET /api/complaints — admin gets all complaints
     @GetMapping

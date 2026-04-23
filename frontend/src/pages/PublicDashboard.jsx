@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getStats } from '../services/api';
 import { Link } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell';
 
 export default function PublicDashboard() {
   const [stats, setStats] = useState({});
