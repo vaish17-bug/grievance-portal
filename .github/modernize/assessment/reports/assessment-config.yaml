@@ -1,0 +1,12 @@
+assessmentDomains:
+  - cloud-readiness
+  - java-upgrade
+analysisCoverage: full
+targetRuntime: openjdk17
+targetComputeServices:
+  - azure-appservice
+  - azure-aks
+  - azure-container-apps
+targetOS:
+  - windows
+enableContainerization: false
