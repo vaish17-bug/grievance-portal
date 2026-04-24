@@ -20,7 +20,8 @@ public class ComplaintService {
     private final NotificationService notificationService;
 
     // Citizen submits a new complaint
-    public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl) {
+    // photoUrls is a comma-separated string like "/uploads/1.jpg,/uploads/2.jpg"
+    public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrls) {
         User citizen = userRepository.findByEmail(citizenEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -30,7 +31,9 @@ public class ComplaintService {
         complaint.setCategory(request.getCategory());
         complaint.setLatitude(request.getLatitude());
         complaint.setLongitude(request.getLongitude());
-        complaint.setPhotoUrl(photoUrl);
+
+        // FIX: use setPhotoUrls (plural) to match the updated Complaint model
+        complaint.setPhotoUrls(photoUrls);
         complaint.setCitizen(citizen);
 
         if (request.getDepartmentId() != null) {
@@ -43,14 +46,17 @@ public class ComplaintService {
 
         // Save initial status in history
         saveStatusHistory(saved, "PENDING", "Complaint submitted", citizen);
+
+        // Notify all admins
         userRepository.findByRole(User.Role.ADMIN).forEach(admin ->
-    notificationService.createNotification(
-        admin,
-        "New complaint submitted by " + citizen.getName() + ": " + complaint.getTitle(),
-        "NEW_COMPLAINT",
-        saved
-    )
-      );
+            notificationService.createNotification(
+                admin,
+                "New complaint by " + citizen.getName() + ": " + saved.getTitle(),
+                "NEW_COMPLAINT",
+                saved
+            )
+        );
+
         return saved;
     }
 
@@ -68,24 +74,30 @@ public class ComplaintService {
         Assignment assignment = new Assignment();
         assignment.setComplaint(complaint);
         assignment.setWorker(worker);
-        assignment.setSlaDeadline(LocalDateTime.now().plusDays(3)); // 3-day SLA
+        assignment.setSlaDeadline(LocalDateTime.now().plusDays(3));
 
         complaint.setStatus(Complaint.Status.ASSIGNED);
         complaintRepository.save(complaint);
         saveStatusHistory(complaint, "ASSIGNED", "Assigned to worker: " + worker.getName(), admin);
+
         Assignment saved = assignmentRepository.save(assignment);
+
+        // Notify worker
         notificationService.createNotification(
-    worker,
-    "New task assigned: " + complaint.getTitle(),
-    "ASSIGNED",
-    complaint
-);
-notificationService.createNotification(
-    complaint.getCitizen(),
-    "Your complaint '" + complaint.getTitle() + "' has been assigned to a worker.",
-    "STATUS_UPDATE",
-    complaint
-);
+            worker,
+            "New task assigned: " + complaint.getTitle(),
+            "ASSIGNED",
+            complaint
+        );
+
+        // Notify citizen
+        notificationService.createNotification(
+            complaint.getCitizen(),
+            "Your complaint '" + complaint.getTitle() + "' has been assigned to a worker.",
+            "STATUS_UPDATE",
+            complaint
+        );
+
         return saved;
     }
 
@@ -100,12 +112,15 @@ notificationService.createNotification(
         complaint.setStatus(Complaint.Status.valueOf(status));
         complaintRepository.save(complaint);
         saveStatusHistory(complaint, status, remark, worker);
-          notificationService.createNotification(
-    complaint.getCitizen(),
-    "Your complaint '" + complaint.getTitle() + "' status changed to: " + status,
-    "STATUS_UPDATE",
-    complaint
-);
+
+        // Notify citizen of status change
+        notificationService.createNotification(
+            complaint.getCitizen(),
+            "Your complaint '" + complaint.getTitle() + "' status changed to: " + status,
+            "STATUS_UPDATE",
+            complaint
+        );
+
         return complaint;
     }
 
@@ -121,7 +136,7 @@ notificationService.createNotification(
         return complaintRepository.findByCitizen(citizen);
     }
 
-    // Get tasks assigned to worker
+    // Get tasks assigned to a worker
     public List<Assignment> getWorkerTasks(String email) {
         User worker = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
@@ -148,9 +163,9 @@ notificationService.createNotification(
     // Public stats for dashboard
     public java.util.Map<String, Long> getStats() {
         return java.util.Map.of(
-            "total", complaintRepository.count(),
-            "pending", complaintRepository.countByStatus(Complaint.Status.PENDING),
-            "resolved", complaintRepository.countByStatus(Complaint.Status.RESOLVED),
+            "total",      complaintRepository.count(),
+            "pending",    complaintRepository.countByStatus(Complaint.Status.PENDING),
+            "resolved",   complaintRepository.countByStatus(Complaint.Status.RESOLVED),
             "inProgress", complaintRepository.countByStatus(Complaint.Status.IN_PROGRESS)
         );
     }

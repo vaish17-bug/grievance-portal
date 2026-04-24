@@ -4,10 +4,10 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import java.security.Key;
 import java.util.Date;
 
-// JWT = JSON Web Token, used to verify logged-in users
 @Component
 public class JwtUtil {
 
@@ -21,7 +21,6 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    // Create a token when user logs in
     public String generateToken(String email, String role) {
         return Jwts.builder()
                 .setSubject(email)
@@ -32,21 +31,29 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Read email from token
     public String extractEmail(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey()).build()
-                .parseClaimsJws(token)
-                .getBody().getSubject();
+        return getClaims(token).getSubject();
     }
 
-    // Check if token is valid
+    // NEW: extract role claim — needed by JwtFilter
+    public String extractRole(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
     public boolean isValid(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(getKey()).build().parseClaimsJws(token);
+            getClaims(token);
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

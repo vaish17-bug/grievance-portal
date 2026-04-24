@@ -13,27 +13,34 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
-// Notifications
-export const getNotifications = () => API.get('/notifications');
-export const getUnreadCount = () => API.get('/notifications/unread-count');
-export const markNotificationsRead = () => API.post('/notifications/mark-read');
 
-// Auth APIs
-export const loginUser = (data) => API.post('/auth/login', data);
+// ── Auth APIs ─────────────────────────────────────────────
+export const loginUser    = (data) => API.post('/auth/login', data);
 export const registerUser = (data) => API.post('/auth/register', data);
 
-// Complaint APIs
-export const submitComplaint = (formData) => API.post('/complaints', formData);
-export const getMyComplaints = () => API.get('/complaints/my');
-export const getAllComplaints = () => API.get('/complaints');
-export const assignComplaint = (id, workerId) =>
-  API.post(`/complaints/${id}/assign?workerId=${workerId}`);
-export const updateComplaintStatus = (id, status, remark) =>
-  API.patch(`/complaints/${id}/status?status=${status}&remark=${remark}`);
-export const getWorkerTasks = () => API.get('/complaints/worker-tasks');
-export const getComplaintHistory = (id) => API.get(`/complaints/${id}/history`);
+// ── Complaint APIs ────────────────────────────────────────
+// FIX: explicitly set multipart/form-data so Spring Boot
+//      can parse @RequestParam fields alongside file uploads.
+//      Do NOT set a manual boundary — axios/browser sets it automatically.
+export const submitComplaint = (formData) =>
+  API.post('/complaints', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 
-// Public APIs
-export const getStats = () => API.get('/public/stats');
+export const getMyComplaints       = ()              => API.get('/complaints/my');
+export const getAllComplaints       = ()              => API.get('/complaints');
+export const assignComplaint       = (id, workerId)  => API.post(`/complaints/${id}/assign?workerId=${workerId}`);
+export const updateComplaintStatus = (id, status, remark) =>
+  API.patch(`/complaints/${id}/status?status=${status}&remark=${encodeURIComponent(remark || '')}`);
+export const getWorkerTasks        = ()              => API.get('/complaints/worker-tasks');
+export const getComplaintHistory   = (id)            => API.get(`/complaints/${id}/history`);
+
+// ── Notification APIs ─────────────────────────────────────
+export const getNotifications      = ()  => API.get('/notifications');
+export const getUnreadCount        = ()  => API.get('/notifications/unread-count');
+export const markNotificationsRead = ()  => API.post('/notifications/mark-read');
+
+// ── Public APIs ───────────────────────────────────────────
+export const getStats       = () => API.get('/public/stats');
 export const getDepartments = () => API.get('/public/departments');
-export const getWorkers = () => API.get('/public/workers');
+export const getWorkers     = () => API.get('/public/workers');

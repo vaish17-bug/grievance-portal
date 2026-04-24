@@ -19,19 +19,22 @@ public class Complaint {
     private String description;
 
     private String category;
-    private String photoUrl;
+
+    // FIX: renamed from photoUrl to photoUrls — stores comma-separated URLs
+    // e.g. "/uploads/1.jpg,/uploads/2.jpg,/uploads/3.jpg"
+    @Column(columnDefinition = "TEXT")
+    private String photoUrls;
+
     private Double latitude;
     private Double longitude;
 
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;
 
-    // Many complaints belong to one citizen
     @ManyToOne
     @JoinColumn(name = "citizen_id")
     private User citizen;
 
-    // Many complaints belong to one department
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;

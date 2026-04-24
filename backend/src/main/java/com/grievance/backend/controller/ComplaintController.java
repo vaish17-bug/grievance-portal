@@ -38,7 +38,7 @@ public ResponseEntity<Complaint> submit(
     if (photos != null) {
         for (MultipartFile photo : photos) {
             if (!photo.isEmpty()) {
-                String uploadDir = "uploads/";
+                String uploadDir = System.getProperty("user.dir") + "/uploads/";
                 new File(uploadDir).mkdirs();
                 String filename = System.currentTimeMillis() + "_" + photo.getOriginalFilename();
                 photo.transferTo(new File(uploadDir + filename));
