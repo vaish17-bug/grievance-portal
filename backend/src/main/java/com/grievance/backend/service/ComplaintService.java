@@ -18,8 +18,9 @@ public class ComplaintService {
     private final AssignmentRepository assignmentRepository;
     private final StatusHistoryRepository statusHistoryRepository;
 
-    // Citizen submits a new complaint
+    // ✅ Citizen submits complaint (UPDATED)
     public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl) {
+
         User citizen = userRepository.findByEmail(citizenEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -27,8 +28,18 @@ public class ComplaintService {
         complaint.setTitle(request.getTitle());
         complaint.setDescription(request.getDescription());
         complaint.setCategory(request.getCategory());
-        complaint.setLatitude(request.getLatitude());
-        complaint.setLongitude(request.getLongitude());
+
+        // 🔥 LOCATION (SAFE HANDLING)
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            complaint.setLatitude(request.getLatitude());
+            complaint.setLongitude(request.getLongitude());
+            complaint.setAddress(request.getAddress());
+        } else {
+            // fallback if location not provided
+            complaint.setLatitude(0.0);
+            complaint.setLongitude(0.0);
+        }
+
         complaint.setPhotoUrl(photoUrl);
         complaint.setCitizen(citizen);
 
@@ -38,15 +49,18 @@ public class ComplaintService {
             complaint.setDepartment(dept);
         }
 
+        // 🔥 IMPORTANT FIX → set initial status
+        complaint.setStatus(Complaint.Status.PENDING);
+
         Complaint saved = complaintRepository.save(complaint);
 
-        // Save initial status in history
+        // Save history
         saveStatusHistory(saved, "PENDING", "Complaint submitted", citizen);
 
         return saved;
     }
 
-    // Admin assigns complaint to worker
+    // Admin assigns complaint
     public Assignment assignComplaint(Long complaintId, Long workerId, String adminEmail) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
@@ -60,16 +74,17 @@ public class ComplaintService {
         Assignment assignment = new Assignment();
         assignment.setComplaint(complaint);
         assignment.setWorker(worker);
-        assignment.setSlaDeadline(LocalDateTime.now().plusDays(3)); // 3-day SLA
+        assignment.setSlaDeadline(LocalDateTime.now().plusDays(3));
 
         complaint.setStatus(Complaint.Status.ASSIGNED);
         complaintRepository.save(complaint);
+
         saveStatusHistory(complaint, "ASSIGNED", "Assigned to worker: " + worker.getName(), admin);
 
         return assignmentRepository.save(assignment);
     }
 
-    // Worker updates complaint status
+    // Worker updates status
     public Complaint updateStatus(Long complaintId, String status, String remark, String workerEmail) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
@@ -79,38 +94,34 @@ public class ComplaintService {
 
         complaint.setStatus(Complaint.Status.valueOf(status));
         complaintRepository.save(complaint);
+
         saveStatusHistory(complaint, status, remark, worker);
 
         return complaint;
     }
 
-    // Get all complaints (admin)
     public List<Complaint> getAllComplaints() {
         return complaintRepository.findAll();
     }
 
-    // Get complaints by citizen
     public List<Complaint> getMyCitizensComplaints(String email) {
         User citizen = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return complaintRepository.findByCitizen(citizen);
     }
 
-    // Get tasks assigned to worker
     public List<Assignment> getWorkerTasks(String email) {
         User worker = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
         return assignmentRepository.findByWorker(worker);
     }
 
-    // Get status history of a complaint
     public List<StatusHistory> getHistory(Long complaintId) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new RuntimeException("Complaint not found"));
         return statusHistoryRepository.findByComplaintOrderByUpdatedAtDesc(complaint);
     }
 
-    // Private helper to save status history
     private void saveStatusHistory(Complaint complaint, String status, String remark, User updatedBy) {
         StatusHistory history = new StatusHistory();
         history.setComplaint(complaint);
@@ -120,13 +131,12 @@ public class ComplaintService {
         statusHistoryRepository.save(history);
     }
 
-    // Public stats for dashboard
     public java.util.Map<String, Long> getStats() {
         return java.util.Map.of(
-            "total", complaintRepository.count(),
-            "pending", complaintRepository.countByStatus(Complaint.Status.PENDING),
-            "resolved", complaintRepository.countByStatus(Complaint.Status.RESOLVED),
-            "inProgress", complaintRepository.countByStatus(Complaint.Status.IN_PROGRESS)
+                "total", complaintRepository.count(),
+                "pending", complaintRepository.countByStatus(Complaint.Status.PENDING),
+                "resolved", complaintRepository.countByStatus(Complaint.Status.RESOLVED),
+                "inProgress", complaintRepository.countByStatus(Complaint.Status.IN_PROGRESS)
         );
     }
 }

@@ -1,58 +1,63 @@
 package com.grievance.backend.config;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.List;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-@Configuration
+import java.io.IOException;
+
+@Component
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class JwtFilter extends OncePerRequestFilter {
 
-    private final JwtFilter jwtFilter;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
 
-    @Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    System.out.println("SECURITY CONFIG LOADED");
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-    http
-        .csrf(csrf -> csrf.disable())
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/**").permitAll()
-            .requestMatchers("/api/public/**").permitAll()
-            .anyRequest().authenticated()
-        )
-        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        String authHeader = request.getHeader("Authorization");
 
-    return http.build();
-}
-    // Allow React frontend (port 5173) to call our backend (port 8080)
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+        String token = authHeader.substring(7);
+        String username = jwtUtil.extractUsername(token);
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // Encrypts passwords before saving
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            if (jwtUtil.validateToken(token, userDetails.getUsername())) {
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                // 🔥 THIS LINE IS CRITICAL
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
     }
 }
