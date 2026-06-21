@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://localhost:8081/api',
 });
 
 // Automatically attach JWT token to every request
@@ -28,6 +28,8 @@ export const updateComplaintStatus = (id, status, remark) =>
   API.patch(`/complaints/${id}/status?status=${status}&remark=${remark}`);
 export const getWorkerTasks = () => API.get('/complaints/worker-tasks');
 export const getComplaintHistory = (id) => API.get(`/complaints/${id}/history`);
+export const getNotifications = () => API.get('/notifications');
+export const markNotificationRead = (id) => API.patch(`/notifications/${id}/read`);
 
 // Public APIs
 export const getStats = () => API.get('/public/stats');

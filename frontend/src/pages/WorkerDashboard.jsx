@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react';
-import { getWorkerTasks, updateComplaintStatus } from '../services/api';
+import { getWorkerTasks, updateComplaintStatus, getNotifications } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function WorkerDashboard() {
   const { user, logout } = useAuth();
   const [tasks, setTasks] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => { loadTasks(); }, []);
+  useEffect(() => { loadTasks(); loadNotifications(); }, []);
 
   const loadTasks = async () => {
     const res = await getWorkerTasks();
     setTasks(res.data);
+  };
+
+  const loadNotifications = async () => {
+    try {
+      const res = await getNotifications();
+      setNotifications(res.data);
+    } catch {
+      // ignore
+    }
   };
 
   const handleStatus = async (complaintId, status) => {
@@ -35,6 +45,18 @@ export default function WorkerDashboard() {
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
+        {notifications.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6">
+            <h3 className="font-semibold mb-2">Notifications</h3>
+            <ul className="space-y-2 text-sm text-blue-800">
+              {notifications.map(n => (
+                <li key={n.id} className={`${n.isRead ? 'opacity-70' : 'font-semibold'}`}>
+                  {n.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <h2 className="text-xl font-semibold mb-6">Assigned Tasks ({tasks.length})</h2>
         <div className="space-y-4">
           {tasks.length === 0 && <p className="text-center text-gray-500 py-8">No tasks assigned yet.</p>}
@@ -46,6 +68,16 @@ export default function WorkerDashboard() {
               <p className="text-gray-400 text-xs">
                 SLA Deadline: {new Date(t.slaDeadline).toLocaleDateString()}
               </p>
+              {t.complaint.attachments && t.complaint.attachments.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium">Attachments:</p>
+                  <div className="flex gap-2 mt-1 flex-wrap">
+                    {t.complaint.attachments.map(a => (
+                      <img key={a.id} src={`http://localhost:8081${a.fileUrl}`} alt="attachment" className="w-20 h-20 object-cover rounded border" />
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="text-sm mt-2 font-medium">
                 Status: <span className="text-orange-600">{t.complaint.status}</span>
               </p>

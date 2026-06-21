@@ -3,6 +3,8 @@ package com.grievance.backend.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "complaints")
@@ -22,6 +24,9 @@ public class Complaint {
     private String photoUrl;
     private Double latitude;
     private Double longitude;
+
+    @OneToMany(mappedBy = "complaint", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<ComplaintAttachment> attachments = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;

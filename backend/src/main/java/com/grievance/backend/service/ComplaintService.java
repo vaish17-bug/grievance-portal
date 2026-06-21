@@ -17,9 +17,11 @@ public class ComplaintService {
     private final DepartmentRepository departmentRepository;
     private final AssignmentRepository assignmentRepository;
     private final StatusHistoryRepository statusHistoryRepository;
+    private final ComplaintAttachmentRepository complaintAttachmentRepository;
+    private final NotificationService notificationService;
 
     // Citizen submits a new complaint
-    public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl) {
+    public Complaint submitComplaint(ComplaintRequest request, String citizenEmail, String photoUrl, java.util.List<String> attachmentUrls) {
         User citizen = userRepository.findByEmail(citizenEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -39,6 +41,18 @@ public class ComplaintService {
         }
 
         Complaint saved = complaintRepository.save(complaint);
+
+        if (attachmentUrls != null && !attachmentUrls.isEmpty()) {
+            saved.setPhotoUrl(attachmentUrls.get(0));
+            var attachments = attachmentUrls.stream().map(url -> {
+                ComplaintAttachment attachment = new ComplaintAttachment();
+                attachment.setFileUrl(url);
+                attachment.setComplaint(saved);
+                return attachment;
+            }).toList();
+            complaintAttachmentRepository.saveAll(attachments);
+            saved.setAttachments(attachments);
+        }
 
         // Save initial status in history
         saveStatusHistory(saved, "PENDING", "Complaint submitted", citizen);
@@ -65,6 +79,14 @@ public class ComplaintService {
         complaint.setStatus(Complaint.Status.ASSIGNED);
         complaintRepository.save(complaint);
         saveStatusHistory(complaint, "ASSIGNED", "Assigned to worker: " + worker.getName(), admin);
+
+        notificationService.createNotification(worker,
+                "You have been assigned complaint #" + complaint.getId() + ": " + complaint.getTitle(),
+                "ASSIGNMENT");
+
+        notificationService.createNotification(complaint.getCitizen(),
+                "Your complaint #" + complaint.getId() + " has been assigned to " + worker.getName(),
+                "ASSIGNMENT");
 
         return assignmentRepository.save(assignment);
     }
